@@ -1,9 +1,11 @@
 {
     "Games": {
-        
+        "1 Date Danger": "1-date-danger.html",
+        "Meatboy": "meatboy.html"
     },
 
     "Icon": {
-
+        "1 Date Danger": "1-date-danger.jpg",
+        "Meatboy": "meatboy.png"
     }
 }
