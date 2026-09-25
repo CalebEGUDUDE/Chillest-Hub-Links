@@ -1,11 +1,25 @@
 {
     "Games": {
         "1 Date Danger": "1-date-danger.html",
-        "Meatboy": "meatboy.html"
+        "Meatboy": "meatboy.html",
+        "Cookie Clicker": "cookie-clicker.html",
+        "Tag": "tag.html",
+        "Dune Dash": "dune-dash.html",
+        "Snow Rider 3d": "snow-rider-3d.html",
+        "A Dance of Fire and Ice": "a-dance-of-fire-and-ice.html",
+        "Kart Bros": "kart-bros.html",
+        "Stickman Duel": "stickman-duel"
     },
 
     "Icon": {
         "1 Date Danger": "1-date-danger.jpg",
-        "Meatboy": "meatboy.png"
+        "Meatboy": "meatboy.png",
+        "Cookie Clicker": "cookie-clicker.png",
+        "Tag": "tag.png",
+        "Dune Dash": "dune-dash.png",
+        "Snow Rider 3d": "snow-rider-3d.png",
+        "A Dance of Fire and Ice": "a-dance-of-fire-and-ice.png",
+        "Kart Bros": "kart-bros.png",
+        "Stickman Duel": "stickman-duel.png"
     }
 }
