@@ -1,5 +1,7 @@
 {
     "Tools": {
-        "Html Editor": "html-editor.html"
+        "Html Editor": "html-editor.html",
+        "Link Checker": "link-checker.html",
+        "Google Doc Explorer": "google-doc-explorer.html"
     }
 }
