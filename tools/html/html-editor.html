@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Web Launcher - IDE</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CodeMirror 5 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            overflow: hidden;
+        }
+
+        /* CodeMirror Overrides for perfect cursor alignment and styling */
+        .CodeMirror {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace !important;
+            font-size: 14px;
+            line-height: 1.6;
+            height: 100% !important;
+            background-color: transparent !important;
+        }
+        
+        .CodeMirror-gutters {
+            background-color: #0f172a !important;
+            border-right: 1px solid #1e293b !important;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Custom UI Elements */
+        .glass-header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .glow-btn {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            transition: all 0.2s ease;
+        }
+        .glow-btn:hover {
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.7);
+            transform: translateY(-1px);
+        }
+        .glow-btn:active { transform: translateY(1px); }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 select-none">
+
+    <header class="glass-header h-16 px-4 flex items-center justify-between shrink-0 z-30">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-code text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">HTML LAUNCHER</h1>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    IDE Ready
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar Buttons -->
+        <div class="flex items-center gap-2 md:gap-3">
+            
+            <input type="file" id="file-import" accept=".html,.htm,.txt" class="hidden">
+            
+            <button id="btn-import" class="h-10 px-3 md:px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-folder-open text-amber-400"></i>
+                <span class="hidden sm:inline">Import</span>
+            </button>
+
+            <button id="btn-download" class="h-10 px-3 md:px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-download text-sky-400"></i>
+                <span class="hidden sm:inline">Download</span>
+            </button>
+
+            <button id="btn-clear" class="h-10 px-3 md:px-4 bg-slate-800 hover:bg-red-500/20 text-slate-200 hover:text-red-400 border border-slate-700 hover:border-red-500/40 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-trash-can text-red-400"></i>
+                <span class="hidden md:inline">Clear</span>
+            </button>
+
+            <div class="w-px h-6 bg-slate-700 mx-1"></div>
+
+            <button id="btn-launch" class="glow-btn h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-sm flex items-center gap-2 tracking-wide">
+                <i class="fa-solid fa-rocket animate-bounce"></i>
+                <span>LAUNCH</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden relative">
+        <!-- Editor Section -->
+        <section class="flex-1 flex flex-col min-w-0 bg-[#282a36] border-r border-slate-800">
+            <div class="h-9 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-brands fa-html5 text-orange-500 text-sm"></i>
+                    <span class="font-medium text-slate-300">index.html</span>
+                </div>
+                <button id="btn-format" class="hover:text-slate-200 transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-align-left text-purple-400"></i> Auto-Indent
+                </button>
+            </div>
+            
+            <div class="flex-1 relative w-full h-full">
+                <!-- Textarea for CodeMirror to hook into -->
+                <textarea id="code-editor" class="hidden"></textarea>
+            </div>
+        </section>
+
+        <!-- Live Preview Section -->
+        <section class="flex-1 flex flex-col min-w-0 bg-slate-900 relative hidden lg:flex">
+            <div class="h-9 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-eye text-indigo-400"></i>
+                    <span class="font-medium text-slate-300">Live Preview</span>
+                </div>
+            </div>
+            <div class="flex-1 w-full h-full bg-slate-950 p-2">
+                <iframe id="preview-frame" class="w-full h-full bg-white rounded border border-slate-700 shadow-inner" sandbox="allow-scripts allow-modals"></iframe>
+            </div>
+        </section>
+    </main>
+
+    <!-- CodeMirror Core and Modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+
+    <script>
+        const defaultCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My App</title>
+    <style>
+        body {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        button {
+            background: #89b4fa;
+            color: #11111b;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #b4befe;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello, World! 🚀</h1>
+    <p>Edit this code and hit Launch.</p>
+    <button onclick="greet()">Click Me</button>
+
+    <script>
+        function greet() {
+            alert('Launcher is working perfectly!');
+        }
+    <\/script>
+</body>
+</html>`;
+
+        // Initialize CodeMirror 5
+        const editorElement = document.getElementById('code-editor');
+        const editor = CodeMirror.fromTextArea(editorElement, {
+            mode: 'htmlmixed',
+            theme: 'dracula',
+            lineNumbers: true,
+            autoCloseTags: true,
+            autoCloseBrackets: true,
+            indentUnit: 4,
+            tabSize: 4,
+            indentWithTabs: false,
+            lineWrapping: true,
+            viewportMargin: Infinity
+        });
+
+        editor.setValue(localStorage.getItem('saved_launcher_code') || defaultCode);
+
+        // Fix Cursor Offset Issue by refreshing CM after fonts load and render tree settles
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                editor.refresh();
+            }, 100);
+        });
+
+        // Live Preview Logic
+        const previewFrame = document.getElementById('preview-frame');
+        let previewTimeout;
+
+        function updatePreview() {
+            const code = editor.getValue();
+            previewFrame.srcdoc = code;
+            localStorage.setItem('saved_launcher_code', code);
+        }
+
+        editor.on('change', () => {
+            clearTimeout(previewTimeout);
+            previewTimeout = setTimeout(updatePreview, 500);
+        });
+        updatePreview(); // Initial render
+
+        // Import Logic
+        const fileInput = document.getElementById('file-import');
+        document.getElementById('btn-import').addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                editor.setValue(ev.target.result);
+                // Important to refresh to recalculate layout lines
+                setTimeout(() => editor.refresh(), 10);
+            };
+            reader.readAsText(file);
+            fileInput.value = ''; // Reset
+        });
+
+        // Download Logic
+        document.getElementById('btn-download').addEventListener('click', () => {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Clear Logic
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            if(confirm("Are you sure you want to clear the editor?")) {
+                editor.setValue('');
+                editor.focus();
+            }
+        });
+
+        // Launch in New Tab Logic
+        document.getElementById('btn-launch').addEventListener('click', () => {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const newWindow = window.open(url, '_blank');
+            if (newWindow) {
+                newWindow.focus();
+            } else {
+                alert("Please allow pop-ups to launch the app in a new tab.");
+            }
+        });
+
+        // Auto-Indent entire document
+        document.getElementById('btn-format').addEventListener('click', () => {
+            const totalLines = editor.lineCount();
+            for (let i = 0; i < totalLines; i++) {
+                editor.indentLine(i);
+            }
+        });
+        
+        // Ensure refresh on resize to avoid UI breakages
+        window.addEventListener('resize', () => {
+            editor.refresh();
+        });
+    </script>
+</body>
+</html>
