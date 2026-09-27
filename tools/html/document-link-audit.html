@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Link Audit</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #17232b;
+            --muted: #64727a;
+            --paper: #fffdf8;
+            --line: #dfe5df;
+            --green: #276749;
+            --orange: #e7773d;
+            --blue: #286d8d;
+            --red: #a63736;
+            --shadow: 0 18px 45px rgba(38, 57, 48, 0.1);
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; color: var(--ink); background: #edf4ee; font-family: Arial, sans-serif; }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        .shell { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 32px 0 48px; }
+        .topbar { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 24px; }
+        .eyebrow { margin: 0 0 8px; color: var(--orange); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+        h1 { margin: 0; font: 700 3rem/1 Georgia, 'Times New Roman', serif; }
+        .intro { max-width: 460px; margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+        .source-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .source-link { min-width: 0; overflow: hidden; color: var(--blue); font: 0.78rem/1.4 monospace; text-overflow: ellipsis; white-space: nowrap; }
+        .button { flex-shrink: 0; border: 0; border-radius: 5px; padding: 10px 14px; color: white; background: var(--green); font-size: 0.78rem; font-weight: 700; }
+        .button:hover { filter: brightness(1.08); }
+        .button:disabled { cursor: wait; opacity: 0.6; }
+        .button.secondary { border: 1px solid #b9cbd0; color: var(--blue); background: transparent; }
+        .summary { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+        .metric { padding: 16px 18px 16px 0; }
+        .metric + .metric { border-left: 1px solid var(--line); padding-left: 18px; }
+        .metric strong { display: block; font: 700 1.7rem/1.1 Georgia, 'Times New Roman', serif; }
+        .metric span { display: block; margin-top: 5px; color: var(--muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+        .metric.broken strong { color: var(--red); }
+        .metric.unknown strong { color: #876122; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding-bottom: 12px; }
+        .toolbar input, .toolbar select { min-height: 38px; border: 1px solid #cfdad2; border-radius: 5px; padding: 8px 10px; color: var(--ink); background: var(--paper); outline: none; }
+        .toolbar input:focus, .toolbar select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(40, 109, 141, 0.12); }
+        #searchInput { flex: 1 1 210px; }
+        #categoryFilter { flex: 1 1 180px; }
+        #statusFilter { flex: 0 1 150px; }
+        .progress-track { height: 3px; overflow: hidden; background: #d8e2da; }
+        #progressBar { width: 0; height: 100%; background: var(--green); transition: width 180ms ease; }
+        .notice { min-height: 1.4em; margin: 10px 0 8px; color: var(--muted); font-size: 0.78rem; }
+        .table-head, .result { display: grid; grid-template-columns: minmax(115px, 0.23fr) minmax(0, 1fr) minmax(118px, 0.17fr) auto; align-items: center; gap: 14px; }
+        .table-head { padding: 10px 12px; color: var(--muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .results { border-top: 1px solid var(--line); }
+        .result { min-height: 62px; padding: 10px 12px; border-bottom: 1px solid var(--line); animation: appear 220ms ease both; }
+        .response-info { grid-column: 1 / -1; color: var(--muted); font-size: 0.76rem; }
+        .response-info summary { width: fit-content; cursor: pointer; color: var(--blue); font-weight: 700; }
+        .response-info dl { display: grid; gap: 5px; margin: 9px 0 2px; }
+        .response-info dl div { display: grid; grid-template-columns: 115px minmax(0, 1fr); gap: 8px; }
+        .response-info dt { font-weight: 700; }
+        .response-info dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-family: monospace; }
+        @keyframes appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .category { color: var(--muted); font-size: 0.8rem; font-weight: 700; overflow-wrap: anywhere; }
+        .url { min-width: 0; color: var(--blue); font: 0.78rem/1.4 monospace; overflow-wrap: anywhere; text-decoration: none; }
+        .url:hover { text-decoration: underline; }
+        .status { justify-self: start; display: inline-flex; align-items: center; gap: 7px; border-radius: 3px; padding: 5px 7px; color: var(--muted); background: #e9eeea; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+        .status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ''; }
+        .status.working { color: var(--green); background: #e1f1e5; }
+        .status.broken { color: var(--red); background: #f8e6e1; }
+        .status.unknown { color: #876122; background: #f5edd9; }
+        .recheck-button { border: 1px solid #b9cbd0; border-radius: 4px; padding: 7px 9px; color: var(--blue); background: transparent; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+        .recheck-button:hover { color: white; background: var(--blue); }
+        .recheck-button:disabled { cursor: wait; opacity: 0.55; }
+        .delete-group { padding: 14px 12px; border-bottom: 1px solid var(--line); }
+        .delete-group h2 { margin: 0 0 10px; font: 700 1rem Georgia, 'Times New Roman', serif; }
+        .delete-group ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
+        .delete-group li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--red); }
+        .delete-group a { color: var(--blue); font: 0.78rem/1.5 monospace; overflow-wrap: anywhere; }
+        .empty { padding: 44px 16px; color: var(--muted); text-align: center; font-size: 0.88rem; }
+        .footer-note { margin: 16px 0 0; color: var(--muted); font-size: 0.74rem; line-height: 1.5; }
+        @media (max-width: 640px) {
+            .shell { width: calc(100% - 24px); padding-top: 22px; }
+            .topbar { display: block; }
+            h1 { font-size: 2.5rem; }
+            .intro { margin-top: 12px; }
+            .source-row { align-items: stretch; flex-direction: column; }
+            .source-link { white-space: normal; overflow-wrap: anywhere; }
+            .table-head, .result { grid-template-columns: minmax(88px, 0.35fr) minmax(0, 1fr); gap: 8px; }
+            .table-head span:nth-child(3), .table-head span:last-child { display: none; }
+            .result .status { grid-column: 1 / -1; grid-row: 2; }
+            .category { grid-column: 1; grid-row: 1; }
+            .url { grid-column: 2; grid-row: 1; }
+            .result .recheck-button { grid-column: 2; grid-row: 3; justify-self: end; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Chillest Hub / Utility</p>
+                <h1>Link audit</h1>
+            </div>
+            <p class="intro">Check the links in the shared document and see which section each one belongs to.</p>
+        </header>
+
+        <div class="source-row">
+            <a class="source-link" id="sourceLink" target="_blank" rel="noopener noreferrer"></a>
+            <button class="button secondary" id="reloadButton" type="button">Reload document</button>
+            <button class="button" id="checkButton" type="button" disabled>Check links</button>
+        </div>
+
+        <section class="summary" aria-label="Audit summary">
+            <div class="metric"><strong id="totalCount">0</strong><span>Links found</span></div>
+            <div class="metric broken"><strong id="brokenCount">0</strong><span>Broken</span></div>
+            <div class="metric unknown"><strong id="unknownCount">0</strong><span>Unverifiable</span></div>
+        </section>
+
+        <div class="toolbar">
+            <input id="searchInput" type="search" placeholder="Search links or categories" aria-label="Search links or categories">
+            <select id="categoryFilter" aria-label="Filter by category"><option value="all">All categories</option></select>
+            <select id="statusFilter" aria-label="Filter by status">
+                <option value="all">All statuses</option>
+                <option value="working">Working</option>
+                <option value="broken">Broken</option>
+                <option value="unknown">Unverifiable</option>
+            </select>
+            <button class="button secondary" id="deleteListButton" type="button" disabled>Show delete list (0)</button>
+            <button class="button secondary" id="exportButton" type="button" disabled>Export CSV</button>
+        </div>
+
+        <div class="progress-track" role="progressbar" aria-label="Link check progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progressBar"></div></div>
+        <p class="notice" id="notice" aria-live="polite">Loading document links...</p>
+        <div class="table-head" aria-hidden="true"><span>Category / section</span><span>Link</span><span>Status</span><span>Action</span></div>
+        <section class="results" id="results" aria-label="Document links">
+            <div class="empty">Loading document links...</div>
+        </section>
+        <p class="footer-note">Response details include HTTP metadata the browser can read. Some sites block browser checks or hide response headers; those details may be unavailable.</p>
+    </main>
+
+    <script>
+        const documentUrl = 'https://docs.google.com/document/d/17oNFTBQvEQUOVzwePROLSzQryr7eDL2YsoL5JkGF3J0/edit?pli=1&tab=t.0#heading=h.e6ud4t40ia14';
+        const documentId = '17oNFTBQvEQUOVzwePROLSzQryr7eDL2YsoL5JkGF3J0';
+        const exportUrl = `https://docs.google.com/document/d/${documentId}/export?format=txt`;
+        const results = document.getElementById('results');
+        const notice = document.getElementById('notice');
+        const checkButton = document.getElementById('checkButton');
+        const categoryFilter = document.getElementById('categoryFilter');
+        let links = [];
+        let isChecking = false;
+        let activeRechecks = 0;
+        let hasCheckedLinks = false;
+        let showDeleteList = false;
+
+        document.getElementById('sourceLink').href = documentUrl;
+        document.getElementById('sourceLink').textContent = documentUrl;
+
+        const parseDocument = (text) => {
+            const found = new Map();
+            let category = 'Uncategorized';
+            let section = '';
+            const topLevelCategories = new Set(['Home', 'News', 'Staff', 'Pr0x1es', 'G4mes', 'Sites', 'Docs', 'Editor Spots', 'Editor Chat', 'Text Art', 'Archives']);
+            const urlPattern = /https?:\/\/[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
+            const bareDomainSuffixes = new Set(['app', 'au', 'best', 'biz', 'ca', 'co', 'com', 'de', 'dev', 'edu', 'fr', 'gg', 'gov', 'info', 'int', 'io', 'jp', 'me', 'mil', 'net', 'org', 'online', 'site', 'tech', 'tv', 'uk', 'us', 'xyz']);
+
+            text.split(/\r?\n/).forEach((line) => {
+                line = line.replace(/^\uFEFF/, '');
+                const heading = line.match(/^\p{Extended_Pictographic}/u);
+                if (heading) {
+                    const headingName = line.replace(/^[^\p{L}\p{N}]+/u, '').trim() || 'Uncategorized';
+                    if (topLevelCategories.has(headingName)) {
+                        category = headingName;
+                        section = '';
+                    } else {
+                        section = headingName;
+                    }
+                }
+                for (const match of line.matchAll(urlPattern)) {
+                    let value = match[0].replace(/[),.;!?]+$/g, '');
+                    const hasScheme = /^https?:\/\//i.test(value);
+                    if (!hasScheme) {
+                        const hostname = value.split('/')[0];
+                        const suffix = hostname.split('.').at(-1).toLowerCase();
+                        if (!value.includes('/') && !bareDomainSuffixes.has(suffix)) continue;
+                        value = `https://${value}`;
+                    }
+                    try {
+                        const url = new URL(value);
+                        if (!['http:', 'https:'].includes(url.protocol)) continue;
+                        const normalized = url.href;
+                        if (category !== 'Pr0x1es' || section === 'Make A Pr0xy L1nk!') continue;
+                        if (!found.has(normalized)) found.set(normalized, { url: normalized, category, section, status: 'pending', detail: '' });
+                    } catch { /* Skip malformed document text. */ }
+                }
+            });
+            return [...found.values()];
+        };
+
+        const visibleLinks = () => {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const selectedCategory = categoryFilter.value;
+            const selectedStatus = document.getElementById('statusFilter').value;
+            return links.filter((link) => (selectedCategory === 'all' || link.category === selectedCategory)
+                && (selectedStatus === 'all' || link.status === selectedStatus)
+                && (!query || `${link.category} ${link.section} ${link.url}`.toLowerCase().includes(query)));
+        };
+
+        const renderResults = () => {
+            if (showDeleteList) {
+                renderDeleteList();
+                return;
+            }
+            const shown = visibleLinks();
+            results.replaceChildren();
+            if (!shown.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty';
+                empty.textContent = links.length ? 'No links match these filters.' : 'No links found in the document.';
+                results.append(empty);
+                return;
+            }
+            shown.forEach((link, index) => {
+                const row = document.createElement('article');
+                row.className = 'result';
+                row.style.animationDelay = `${Math.min(index, 12) * 18}ms`;
+                const category = document.createElement('span');
+                category.className = 'category';
+                category.textContent = link.section ? `${link.category} / ${link.section}` : link.category;
+                const anchor = document.createElement('a');
+                anchor.className = 'url';
+                anchor.href = link.url;
+                anchor.target = '_blank';
+                anchor.rel = 'noopener noreferrer';
+                anchor.textContent = link.url;
+                const status = document.createElement('span');
+                status.className = `status ${link.status}`;
+                status.textContent = link.status === 'pending' ? 'Not checked' : link.detail || link.status;
+                const recheckButton = document.createElement('button');
+                recheckButton.className = 'recheck-button';
+                recheckButton.type = 'button';
+                recheckButton.textContent = link.isRechecking ? 'Checking...' : 'Recheck';
+                recheckButton.disabled = isChecking || Boolean(link.isRechecking);
+                recheckButton.setAttribute('aria-label', `Recheck ${link.url}`);
+                recheckButton.addEventListener('click', () => recheckLink(link));
+                row.append(category, anchor, status, recheckButton);
+                if (link.responseInfo || link.status === 'unknown') {
+                    const responseDetails = document.createElement('details');
+                    responseDetails.className = 'response-info';
+                    const summary = document.createElement('summary');
+                    summary.textContent = 'Response details';
+                    responseDetails.append(summary);
+                    const fields = document.createElement('dl');
+                    const info = link.responseInfo || {
+                        'Check result': link.detail || 'The browser could not read a response.',
+                    };
+                    Object.entries(info).forEach(([label, value]) => {
+                        const field = document.createElement('div');
+                        const term = document.createElement('dt');
+                        term.textContent = label;
+                        const description = document.createElement('dd');
+                        description.textContent = value;
+                        field.append(term, description);
+                        fields.append(field);
+                    });
+                    responseDetails.append(fields);
+                    row.append(responseDetails);
+                }
+                results.append(row);
+            });
+        };
+
+        const renderDeleteList = () => {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const selectedCategory = categoryFilter.value;
+            const brokenLinks = links.filter((link) => (link.status === 'broken' || link.isRechecking)
+                && (selectedCategory === 'all' || link.category === selectedCategory)
+                && (!query || `${link.category} ${link.section} ${link.url}`.toLowerCase().includes(query)));
+            results.replaceChildren();
+            if (!brokenLinks.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty';
+                empty.textContent = hasCheckedLinks
+                    ? 'No confirmed broken links to delete. Unverifiable links are not included.'
+                    : 'Run a link check to create the delete list.';
+                results.append(empty);
+                return;
+            }
+            const groups = new Map();
+            brokenLinks.forEach((link) => {
+                const section = link.section || 'Other proxy links';
+                if (!groups.has(section)) groups.set(section, []);
+                groups.get(section).push(link);
+            });
+            [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([section, sectionLinks]) => {
+                const group = document.createElement('section');
+                group.className = 'delete-group';
+                const heading = document.createElement('h2');
+                heading.textContent = `${section} (${sectionLinks.length})`;
+                const list = document.createElement('ul');
+                sectionLinks.forEach((link) => {
+                    const item = document.createElement('li');
+                    const anchor = document.createElement('a');
+                    anchor.href = link.url;
+                    anchor.target = '_blank';
+                    anchor.rel = 'noopener noreferrer';
+                    anchor.textContent = link.url;
+                    const recheckButton = document.createElement('button');
+                    recheckButton.className = 'recheck-button';
+                    recheckButton.type = 'button';
+                    recheckButton.textContent = link.isRechecking ? 'Checking...' : 'Recheck';
+                    recheckButton.disabled = isChecking || Boolean(link.isRechecking);
+                    recheckButton.setAttribute('aria-label', `Recheck ${link.url}`);
+                    recheckButton.addEventListener('click', () => recheckLink(link));
+                    item.append(anchor, recheckButton);
+                    list.append(item);
+                });
+                group.append(heading, list);
+                results.append(group);
+            });
+        };
+
+        const updateSummary = () => {
+            document.getElementById('totalCount').textContent = links.length;
+            const brokenCount = links.filter((link) => link.status === 'broken').length;
+            document.getElementById('brokenCount').textContent = brokenCount;
+            document.getElementById('unknownCount').textContent = links.filter((link) => link.status === 'unknown').length;
+            const deleteListButton = document.getElementById('deleteListButton');
+            deleteListButton.textContent = showDeleteList ? 'Back to link results' : `Show delete list (${brokenCount})`;
+            deleteListButton.disabled = !hasCheckedLinks || isChecking || activeRechecks > 0;
+        };
+
+        const setProgress = (done, total) => {
+            const percent = total ? Math.round(done / total * 100) : 0;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', percent);
+        };
+
+        const loadDocument = async () => {
+            document.getElementById('reloadButton').disabled = true;
+            checkButton.disabled = true;
+            showDeleteList = false;
+            hasCheckedLinks = false;
+            document.getElementById('statusFilter').disabled = false;
+            notice.textContent = 'Loading links from the shared document...';
+            try {
+                const response = await fetch(exportUrl, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`Document returned HTTP ${response.status}`);
+                links = parseDocument(await response.text());
+                const categories = [...new Set(links.map((link) => link.category))].sort((a, b) => a.localeCompare(b));
+                categoryFilter.replaceChildren(new Option('All categories', 'all'), ...categories.map((name) => new Option(name, name)));
+                updateSummary();
+                renderResults();
+                checkButton.disabled = links.length === 0;
+                document.getElementById('exportButton').disabled = links.length === 0;
+                notice.textContent = `Loaded ${links.length} unique links in ${categories.length} categories.`;
+                setProgress(0, links.length);
+            } catch (error) {
+                links = [];
+                updateSummary();
+                renderResults();
+                notice.textContent = `Could not load the document: ${error.message}. Check that it is public and try again.`;
+            } finally {
+                document.getElementById('reloadButton').disabled = false;
+            }
+        };
+
+        const requestStatus = async (url, method) => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+            try {
+                return await fetch(url, { method, mode: 'cors', redirect: 'follow', cache: 'no-store', signal: controller.signal });
+            } finally {
+                clearTimeout(timeout);
+            }
+        };
+
+        const checkOne = async (link) => {
+            try {
+                let response;
+                try {
+                    response = await requestStatus(link.url, 'HEAD');
+                } catch {
+                    response = await requestStatus(link.url, 'GET');
+                }
+                if (response.status === 405 || response.status === 501) response = await requestStatus(link.url, 'GET');
+                if (response.ok || (response.status >= 300 && response.status < 400)) {
+                    link.status = 'working';
+                    link.detail = `Working (${response.status})`;
+                } else {
+                    link.status = 'broken';
+                    link.detail = `Broken (${response.status})`;
+                }
+                link.responseInfo = {
+                    'HTTP status': `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`,
+                    'Final URL': response.url || link.url,
+                    'Content type': response.headers.get('content-type') || 'Not exposed',
+                    'Content length': response.headers.get('content-length') || 'Not exposed',
+                    'Redirected': response.redirected ? 'Yes' : 'No',
+                };
+            } catch (error) {
+                link.status = 'unknown';
+                link.detail = error.name === 'AbortError' ? 'Timeout' : 'CORS / network blocked';
+                link.responseInfo = null;
+            }
+        };
+
+        const recheckLink = async (link) => {
+            if (isChecking || link.isRechecking) return;
+            activeRechecks++;
+            link.isRechecking = true;
+            link.status = 'pending';
+            link.detail = 'Rechecking...';
+            link.responseInfo = null;
+            checkButton.disabled = true;
+            document.getElementById('reloadButton').disabled = true;
+            notice.textContent = `Rechecking ${link.url}...`;
+            updateSummary();
+            renderResults();
+            await checkOne(link);
+            link.isRechecking = false;
+            activeRechecks--;
+            checkButton.disabled = activeRechecks > 0;
+            document.getElementById('reloadButton').disabled = activeRechecks > 0;
+            updateSummary();
+            renderResults();
+            notice.textContent = `Recheck complete: ${link.detail}.`;
+        };
+
+        const checkLinks = async () => {
+            if (isChecking || activeRechecks > 0 || !links.length) return;
+            isChecking = true;
+            hasCheckedLinks = false;
+            showDeleteList = false;
+            document.getElementById('statusFilter').disabled = false;
+            checkButton.disabled = true;
+            document.getElementById('reloadButton').disabled = true;
+            links.forEach((link) => { link.status = 'pending'; link.detail = ''; link.responseInfo = null; });
+            updateSummary();
+            renderResults();
+            let completed = 0;
+            let nextIndex = 0;
+            const workers = Array.from({ length: Math.min(5, links.length) }, async () => {
+                while (nextIndex < links.length) {
+                    const link = links[nextIndex++];
+                    await checkOne(link);
+                    completed++;
+                    setProgress(completed, links.length);
+                    notice.textContent = `Checking links: ${completed} of ${links.length} complete...`;
+                    updateSummary();
+                    renderResults();
+                }
+            });
+            await Promise.all(workers);
+            const broken = links.filter((link) => link.status === 'broken').length;
+            const unknown = links.filter((link) => link.status === 'unknown').length;
+            notice.textContent = `Check complete: ${broken} broken, ${unknown} unverifiable, ${links.length - broken - unknown} working.`;
+            isChecking = false;
+            hasCheckedLinks = true;
+            updateSummary();
+            renderResults();
+            checkButton.disabled = false;
+            document.getElementById('reloadButton').disabled = false;
+        };
+
+        const exportCsv = () => {
+            const quote = (value) => `"${String(value).replace(/"/g, '""')}"`;
+            const rows = [['Category', 'Section', 'URL', 'Status', 'HTTP status', 'Final URL', 'Content type', 'Content length'], ...visibleLinks().map((link) => [link.category, link.section, link.url, link.detail || 'Not checked', link.responseInfo?.['HTTP status'] || '', link.responseInfo?.['Final URL'] || '', link.responseInfo?.['Content type'] || '', link.responseInfo?.['Content length'] || ''])];
+            const blob = new Blob([rows.map((row) => row.map(quote).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            const anchor = document.createElement('a');
+            anchor.href = URL.createObjectURL(blob);
+            anchor.download = 'document-link-audit.csv';
+            anchor.click();
+            URL.revokeObjectURL(anchor.href);
+        };
+
+        document.getElementById('reloadButton').addEventListener('click', loadDocument);
+        checkButton.addEventListener('click', checkLinks);
+        document.getElementById('deleteListButton').addEventListener('click', () => {
+            showDeleteList = !showDeleteList;
+            document.getElementById('statusFilter').disabled = showDeleteList;
+            updateSummary();
+            renderResults();
+        });
+        document.getElementById('exportButton').addEventListener('click', exportCsv);
+        document.getElementById('searchInput').addEventListener('input', renderResults);
+        categoryFilter.addEventListener('change', renderResults);
+        document.getElementById('statusFilter').addEventListener('change', renderResults);
+        loadDocument();
+    </script>
+</body>
+</html>
