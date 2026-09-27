@@ -1,0 +1,7 @@
+Local mirror of upstream files; the SVG bootstrap is configured to load runtime assets from ./storage/.
+
+App repository: https://github.com/opiumbest/svg
+Commit: 98cc5dba4e2c019d09e968381540e22f352dbf98
+
+Runtime repository: https://github.com/TongSherbet/storage
+Commit: 9682b1aeab2e0df0daa2a182a8550d9590dc91da
